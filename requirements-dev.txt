@@ -1,0 +1,10 @@
+-e .
+black
+flake8
+mypy
+pytest
+isort
+pre-commit
+pytest-cov
+sphinx
+sphinx-rtd-theme
