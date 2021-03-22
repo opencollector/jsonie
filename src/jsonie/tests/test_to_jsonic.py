@@ -330,3 +330,24 @@ def test_pytyped_jsonic_data_to_jsonic_dataclasses(expected, input):
     from ..to_jsonic import ToJsonicConverter
 
     assert ToJsonicConverter()(input[0], input[1]) == expected
+
+
+@dataclasses.dataclass
+class Bar1:
+    bar: typing.Union["Bar1", int]
+
+
+@pytest.mark.parametrize("class_", [Bar1])
+def test_pytyped_jsonic_data_to_jsonic_dataclasses_recursive(class_):
+    from ..to_jsonic import ToJsonicConverter
+
+    expected = (lambda Bar: Bar(bar=Bar(bar=Bar(bar=123))))(class_)
+    input = {
+        "bar": {
+            "bar": {
+                "bar": 123,
+            }
+        }
+    }
+
+    assert ToJsonicConverter()(class_, input) == expected

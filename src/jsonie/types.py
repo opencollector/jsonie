@@ -20,4 +20,7 @@ JsonicSet = typing.Set[typing.Any]  # FIXME: typing.Any is actually JsonicValue
 JsonicObject = typing.Mapping[str, typing.Any]  # FIXME: typing.Any is actually JsonicValue
 TypedClass = object
 JsonicValue = typing.Union[JsonicScalar, JsonicArray, JsonicSet, JsonicObject, TypedClass]
-JsonicType = typing.Union[typing.Type[JsonicValue], typing._GenericAlias, typing._SpecialForm]  # type: ignore
+if hasattr(typing, "ForwardRef"):
+    JsonicType = typing.Union[typing.Type[JsonicValue], typing._GenericAlias, typing._SpecialForm, typing.ForwardRef]  # type: ignore
+else:
+    JsonicType = typing.Union[typing.Type[JsonicValue], typing._GenericAlias, typing._SpecialForm]  # type: ignore

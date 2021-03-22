@@ -2,6 +2,7 @@
 black
 flake8
 mypy
+nox
 pytest
 isort
 pre-commit
