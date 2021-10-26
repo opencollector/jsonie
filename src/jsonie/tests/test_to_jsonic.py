@@ -105,34 +105,71 @@ def test_pytyped_jsonic_data_to_jsonic_scalar_unions(expected, input):
 
 
 @pytest.mark.parametrize(
-    ("expected", "input"),
+    ("prefer_immutable_types_for_nonmutable_sequence", "expected", "input"),
     [
         (
+            False,
             [1, 2],
             (typing.Sequence[int], [1, 2]),
         ),
         (
+            False,
             [1, 2],
             (typing.Sequence[int], [1.5, 2.3]),
         ),
         (
+            False,
             [1.0, 2.0],
             (typing.Sequence[float], [1, 2]),
         ),
         (
+            False,
             [1.5, 2.3],
             (typing.Sequence[typing.Any], [1.5, 2.3]),
         ),
         (
+            False,
             [datetime.datetime(1970, 1, 1, 0, 0, 1, tzinfo=datetime.timezone.utc)],
+            (typing.Sequence[datetime.datetime], [1]),
+        ),
+        (
+            True,
+            (1, 2),
+            (typing.Sequence[int], [1, 2]),
+        ),
+        (
+            True,
+            (1, 2),
+            (typing.Sequence[int], [1.5, 2.3]),
+        ),
+        (
+            True,
+            (1.0, 2.0),
+            (typing.Sequence[float], [1, 2]),
+        ),
+        (
+            True,
+            (1.5, 2.3),
+            (typing.Sequence[typing.Any], [1.5, 2.3]),
+        ),
+        (
+            True,
+            (datetime.datetime(1970, 1, 1, 0, 0, 1, tzinfo=datetime.timezone.utc),),
             (typing.Sequence[datetime.datetime], [1]),
         ),
     ],
 )
-def test_pytyped_jsonic_data_to_jsonic_array(expected, input):
+def test_pytyped_jsonic_data_to_jsonic_array(
+    prefer_immutable_types_for_nonmutable_sequence, expected, input
+):
     from ..to_jsonic import ToJsonicConverter
 
-    assert ToJsonicConverter()(input[0], input[1]) == expected
+    assert (
+        ToJsonicConverter(
+            prefer_immutable_types_for_nonmutable_sequence=prefer_immutable_types_for_nonmutable_sequence
+        )(input[0], input[1])
+        == expected
+    )
 
 
 @pytest.mark.parametrize(
@@ -147,12 +184,20 @@ def test_pytyped_jsonic_data_to_jsonic_array(expected, input):
             (typing.Union[str, typing.Sequence[str]], "0"),
         ),
         (
-            [],
+            (),
             (typing.Union[str, typing.Sequence[str]], []),
         ),
         (
-            [],
+            (),
             (typing.Union[str, typing.Sequence[str]], ()),
+        ),
+        (
+            [],
+            (typing.Union[str, typing.MutableSequence[str]], []),
+        ),
+        (
+            [],
+            (typing.Union[str, typing.MutableSequence[str]], ()),
         ),
         (
             "",
@@ -175,7 +220,10 @@ def test_pytyped_jsonic_data_to_jsonic_array(expected, input):
 def test_pytyped_jsonic_data_to_jsonic_iterable_union(expected, input):
     from ..to_jsonic import ToJsonicConverter
 
-    assert ToJsonicConverter()(input[0], input[1]) == expected
+    assert (
+        ToJsonicConverter(prefer_immutable_types_for_nonmutable_sequence=True)(input[0], input[1])
+        == expected
+    )
 
 
 @pytest.mark.parametrize(

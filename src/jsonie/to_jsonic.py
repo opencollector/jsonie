@@ -233,6 +233,7 @@ class ToJsonicConverter:
     custom_types: typing.Mapping[JsonicType, CustomConverter] = {}
     name_mappers: typing.Mapping[JsonicType, NameMapper] = {}
     visitor: typing.Optional[Visitor] = None
+    prefer_immutable_types_for_nonmutable_sequence: bool = False
 
     pytype_to_json_type_mappings: typing.Dict[typing.Type, str] = {
         int: "number",
@@ -511,7 +512,14 @@ class ToJsonicConverter:
                     )
                 )
                 return (None, math.inf)
-            return self._convert_with_array(tctx, elem_type, value)
+            if (
+                issubclass(origin, collections.abc.MutableSequence)
+                or not self.prefer_immutable_types_for_nonmutable_sequence
+            ):
+                return self._convert_with_array(tctx, elem_type, value)
+            else:
+                pair = self._convert_with_array(tctx, elem_type, value)
+                return (tuple(pair[0]), pair[1])
         elif issubclass(origin, collections.abc.Set):
             assert len(args) == 1
             elem_type = args[0]
@@ -751,10 +759,14 @@ class ToJsonicConverter:
         custom_types: typing.Mapping[JsonicType, CustomConverter] = {},
         name_mappers: typing.Mapping[JsonicType, NameMapper] = {},
         visitor: typing.Optional[Visitor] = None,
+        prefer_immutable_types_for_nonmutable_sequence: bool = False,
     ):
         self.custom_types = custom_types
         self.name_mappers = name_mappers
         self.visitor = visitor
+        self.prefer_immutable_types_for_nonmutable_sequence = (
+            prefer_immutable_types_for_nonmutable_sequence
+        )
 
 
 from_json = ToJsonicConverter()
