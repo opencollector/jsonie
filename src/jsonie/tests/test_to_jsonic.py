@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import decimal
 import typing
+from collections import namedtuple
 
 import pytest
 
@@ -399,3 +400,26 @@ def test_pytyped_jsonic_data_to_jsonic_dataclasses_recursive(class_):
     }
 
     assert ToJsonicConverter()(class_, input) == expected
+
+
+NT1 = namedtuple("NT1", ["a", "b"])
+
+
+class NT2(typing.NamedTuple):
+    a: int
+    b: int
+
+
+@pytest.mark.parametrize(
+    ("expected", "input"),
+    [
+        (NT1(1, 2), (NT1, {"a": 1, "b": 2})),
+        (NT1(1, 2), (NT1, [1, 2])),
+        (NT2(1, 2), (NT2, {"a": 1, "b": 2})),
+        (NT2(1, 2), (NT2, [1, 2])),
+    ],
+)
+def test_pytyped_jsonic_data_to_jsonic_namedtuple(expected, input):
+    from ..to_jsonic import ToJsonicConverter
+
+    assert ToJsonicConverter()(input[0], input[1]) == expected

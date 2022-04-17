@@ -229,6 +229,22 @@ Visitor = typing.Callable[
 ]
 
 
+def is_namedtuple(typ: typing.Type[T]) -> bool:
+    return (
+        hasattr(typ, "_fields")
+        and hasattr(typ, "_make")
+        and hasattr(typ, "_replace")
+        and hasattr(typ, "_asdict")
+    )
+
+
+class NamedTupleType(typing.Protocol):
+    _fields: typing.Sequence[str]
+
+    def _make(self, values: typing.Iterable[str]) -> typing.Tuple:
+        ...  # pragma: nocover
+
+
 class ToJsonicConverter:
     custom_types: typing.Mapping[JsonicType, CustomConverter] = {}
     name_mappers: typing.Mapping[JsonicType, NameMapper] = {}
@@ -675,6 +691,91 @@ class ToJsonicConverter:
             tctx.ctx.validation_error_occurred(ToJsonicConverterError(tctx.pointer, str(e)))
             return (None, math.inf)
 
+    def _convert_with_namedtuple(
+        self,
+        tctx: TraversalContext,
+        typ: NamedTupleType,
+        value: JSONValue,
+    ) -> typing.Tuple[typing.Optional[JsonicObject], float]:
+        annotations: typing.Optional[typing.Mapping[str, typing.Any]] = getattr(
+            typ, "__annotations__", None
+        )
+        if isinstance(value, collections.abc.Mapping):
+            attrs: typing.MutableMapping[str, JsonicValue] = {}
+            confidence = 1.0
+            for n in typ._fields:
+                k: str
+                name_mapper = self._lookup_name_mapper(typ)
+                if name_mapper is None:
+                    k = n
+                else:
+                    _k = name_mapper.reverse_resolve(self, tctx, typ, n)
+                    if _k is None:
+                        continue
+                    k = _k
+                if k not in value:
+                    tctx.ctx.validation_error_occurred(
+                        ToJsonicConverterError(
+                            tctx.pointer, f"property {k} does not exist in {value}"
+                        )
+                    )
+                    if tctx.ctx.stopped:
+                        break
+                    else:
+                        continue
+                else:
+                    if annotations:
+                        jv_pair = self._convert(
+                            tctx.subcontext_with_pointer(tctx.pointer / k), annotations[n], value[k]
+                        )
+                    else:
+                        jv_pair = self._convert(
+                            tctx.subcontext_with_pointer(tctx.pointer / k), typing.Any, value[k]
+                        )
+                attrs[n] = jv_pair[0]
+                confidence *= jv_pair[1]
+            try:
+                return (
+                    typing.cast(typing.Callable, typ)(**attrs),
+                    confidence ** (1 / float(len(attrs))) if attrs else 1.0,
+                )
+            except ValueError as e:
+                tctx.ctx.validation_error_occurred(ToJsonicConverterError(tctx.pointer, str(e)))
+                return (None, math.inf)
+        elif isinstance(value, collections.abc.Sequence) and not isinstance(value, str):
+            values: typing.List[JsonicValue] = []
+            confidence = 1.0
+            try:
+                if annotations:
+                    for i, (n, v) in enumerate(zip(typ._fields, value)):
+                        jv_pair = self._convert(
+                            tctx.subcontext_with_pointer(tctx.pointer / i), annotations[n], v
+                        )
+                        values.append(jv_pair[0])
+                        confidence *= jv_pair[1]
+                else:
+                    for i, (n, v) in enumerate(zip(typ._fields, value)):
+                        jv_pair = self._convert(
+                            tctx.subcontext_with_pointer(tctx.pointer / i), typing.Any, v
+                        )
+                        values.append(jv_pair[0])
+                        confidence *= jv_pair[1]
+                return (
+                    typing.cast(typing.Callable, typ._make)(values),
+                    confidence ** (1 / float(len(values))) if values else 1.0,
+                )
+            except ValueError as e:
+                tctx.ctx.validation_error_occurred(ToJsonicConverterError(tctx.pointer, str(e)))
+                return (None, math.inf)
+        else:
+            tctx.ctx.validation_error_occurred(
+                ToJsonicConverterError(
+                    tctx.pointer,
+                    f"expecting an object or array, got {self.py_type_repr(type(value))}",
+                )
+            )
+            return (None, math.inf)
+
     def _get_type_hints(
         self, tctx: TraversalContext, typ: typing.Any
     ) -> typing.Dict[str, typing.Any]:
@@ -719,6 +820,8 @@ class ToJsonicConverter:
             return self._convert_with_typeddict(tctx, typ, value)
         elif dataclasses.is_dataclass(typ):
             return self._convert_with_dataclass(tctx, typ, value)
+        elif is_namedtuple(typ):
+            return self._convert_with_namedtuple(tctx, typ, value)
         else:
             return self._convert_with_pytype(tctx, typ, value)
 
