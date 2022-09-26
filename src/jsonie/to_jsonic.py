@@ -483,6 +483,9 @@ class ToJsonicConverter:
 
     def _convert_with_generic_type(self, tctx: TraversalContext, typ: typing_compat.GenericAlias, value: JSONValue) -> typing.Tuple[JsonicValue, float]:  # type: ignore
         origin = typing.cast(abc.ABCMeta, typing_compat.get_origin(typ))
+        custom_converter = self.custom_types.get(origin)
+        if custom_converter is not None:
+            return custom_converter(self, tctx, typ, value)
         args = typing_compat.get_args(typ)
         if issubclass(origin, tuple):
             if len(args) == 2 and args[1] is ...:
