@@ -2,6 +2,8 @@ import datetime
 import decimal
 import typing
 
+from .typing_compat import GenericAlias
+
 # JSON types
 JSONScalar = typing.Union[bool, int, float, str]
 JSONArray = typing.Sequence[typing.Any]
@@ -20,7 +22,8 @@ JsonicSet = typing.Set[typing.Any]  # FIXME: typing.Any is actually JsonicValue
 JsonicObject = typing.Mapping[str, typing.Any]  # FIXME: typing.Any is actually JsonicValue
 TypedClass = object
 JsonicValue = typing.Union[JsonicScalar, JsonicArray, JsonicSet, JsonicObject, TypedClass]
+
 if hasattr(typing, "ForwardRef"):
-    JsonicType = typing.Union[typing.Type[JsonicValue], typing._GenericAlias, typing._SpecialForm, typing.ForwardRef]  # type: ignore
+    JsonicType = typing.Union[typing.Type[JsonicValue], GenericAlias, typing._SpecialForm, typing.ForwardRef]  # type: ignore
 else:
-    JsonicType = typing.Union[typing.Type[JsonicValue], typing._GenericAlias, typing._SpecialForm]  # type: ignore
+    JsonicType = typing.Union[typing.Type[JsonicValue], GenericAlias, typing._SpecialForm]  # type: ignore

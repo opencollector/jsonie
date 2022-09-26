@@ -12,6 +12,7 @@ import typing
 
 import iso8601  # type: ignore
 
+from . import typing_compat
 from .exceptions import ToJsonicConverterError
 from .pointer import JSONPointer
 from .types import (
@@ -276,25 +277,25 @@ class ToJsonicConverter:
                 return typename
         return f"unknown type: {typ}"
 
-    def type_repr(self, typ: typing._GenericAlias) -> str:  # type: ignore
+    def type_repr(self, typ: typing_compat.GenericAlias) -> str:  # type: ignore
         custom_converter = self.custom_types.get(typ)
         if custom_converter is not None:
             return custom_converter.resolve_name(typ)
         for typ_, custom_converter in self.custom_types.items():
-            if not isinstance(typ_, (typing._GenericAlias, typing._SpecialForm)) and isinstance(typ, type) and issubclass(typ, typ_):  # type: ignore
+            if typing_compat.is_genuine_type(typ_) and isinstance(typ, type) and issubclass(typ, typ_):  # type: ignore
                 return custom_converter.resolve_name(typ)
-        if isinstance(typ, typing._GenericAlias):  # type: ignore
-            origin = typing.get_origin(typ)
-            if isinstance(origin, typing._SpecialForm) and str(origin) == "typing.Union":
-                return f"any of {english_enumerate((self.type_repr(t) for t in typing.get_args(typ)), conj=', or ')}"
-            elif issubclass(
+        if typing_compat.is_union_type(typ):
+            return f"any of {english_enumerate((self.type_repr(t) for t in typing_compat.get_args(typ)), conj=', or ')}"
+        elif typing_compat.is_generic_type(typ):  # type: ignore
+            origin = typing_compat.get_origin(typ)
+            if issubclass(
                 typing.cast(abc.ABCMeta, origin), (collections.abc.Sequence, collections.abc.Set)
             ):
-                args = typing.get_args(typ)
+                args = typing_compat.get_args(typ)
                 if len(args) == 1:
                     return f"array of {self.type_repr(args[0])}"
             elif issubclass(typing.cast(abc.ABCMeta, origin), collections.abc.Mapping):
-                args = typing.get_args(typ)
+                args = typing_compat.get_args(typ)
                 if len(args) == 2:
                     return f"object of {{{self.type_repr(args[0])}: {self.type_repr(args[1])}}}"
             return f"unknown type: {typ.__origin__}"
@@ -305,7 +306,7 @@ class ToJsonicConverter:
         else:
             return self.py_type_repr(typ)
 
-    def _lookup_name_mapper(self, typ: typing.Union[JsonicType, typing._TypedDictMeta, typing._SpecialForm, typing._GenericAlias]) -> typing.Optional[NameMapper]:  # type: ignore
+    def _lookup_name_mapper(self, typ: typing.Union[JsonicType, typing._TypedDictMeta, typing._SpecialForm, typing_compat.GenericAlias]) -> typing.Optional[NameMapper]:  # type: ignore
         name_mapper = self.name_mappers.get(typ)
         if name_mapper is not None:
             return name_mapper
@@ -480,9 +481,9 @@ class ToJsonicConverter:
             confidence *= math.sqrt(jk_pair[1] * jv_pair[1])
         return (retval, confidence ** (1 / float(len(value))) if value else 2.0)
 
-    def _convert_with_generic_type(self, tctx: TraversalContext, typ: typing._GenericAlias, value: JSONValue) -> typing.Tuple[JsonicValue, float]:  # type: ignore
-        origin = typing.cast(abc.ABCMeta, typing.get_origin(typ))
-        args = typing.get_args(typ)
+    def _convert_with_generic_type(self, tctx: TraversalContext, typ: typing_compat.GenericAlias, value: JSONValue) -> typing.Tuple[JsonicValue, float]:  # type: ignore
+        origin = typing.cast(abc.ABCMeta, typing_compat.get_origin(typ))
+        args = typing_compat.get_args(typ)
         if issubclass(origin, tuple):
             if len(args) == 2 and args[1] is ...:
                 elem_type = args[0]
@@ -569,8 +570,8 @@ class ToJsonicConverter:
         )
         return (None, math.inf)
 
-    def _convert_with_union(self, tctx: TraversalContext, typ: typing._GenericAlias, value: JSONValue) -> typing.Iterable[typing.Tuple[JsonicValue, float]]:  # type: ignore
-        args = typing.get_args(typ)
+    def _convert_with_union(self, tctx: TraversalContext, typ: typing_compat.GenericAlias, value: JSONValue) -> typing.Iterable[typing.Tuple[JsonicValue, float]]:  # type: ignore
+        args = typing_compat.get_args(typ)
         if len(args) == 2 and None.__class__ in args:
             # special case: typing.Optional
             if value is None:
@@ -794,25 +795,23 @@ class ToJsonicConverter:
         if custom_converter is not None:
             return custom_converter(self, tctx, typ, value)
         for typ_, custom_converter in self.custom_types.items():
-            if not isinstance(typ_, (typing._GenericAlias, typing._SpecialForm)) and isinstance(typ, type) and issubclass(typ, typ_):  # type: ignore
+            if typing_compat.is_genuine_type(typ_) and isinstance(typ, type) and issubclass(typ, typ_):  # type: ignore
                 return custom_converter(self, tctx, typ, value)
-        if isinstance(typ, typing._GenericAlias):  # type: ignore
-            origin = typing.get_origin(typ)
-            if isinstance(origin, typing._SpecialForm) and str(origin) == "typing.Union":
-                candidates = sorted(
-                    self._convert_with_union(tctx, typ, value), key=lambda pair: pair[1]
-                )
-                if len(candidates) == 0:
-                    tctx.ctx.validation_error_occurred(
-                        ToJsonicConverterError(
-                            tctx.pointer,
-                            f"value has type {self.py_type_repr(type(value))} ({json.dumps(value)}) where {self.type_repr(typ)} expected",
-                        )
+        if typing_compat.is_union_type(typ):
+            candidates = sorted(
+                self._convert_with_union(tctx, typ, value), key=lambda pair: pair[1]
+            )
+            if len(candidates) == 0:
+                tctx.ctx.validation_error_occurred(
+                    ToJsonicConverterError(
+                        tctx.pointer,
+                        f"value has type {self.py_type_repr(type(value))} ({json.dumps(value)}) where {self.type_repr(typ)} expected",
                     )
-                    return (None, math.inf)
-                return candidates[0]
-            else:
-                return self._convert_with_generic_type(tctx, typ, value)
+                )
+                return (None, math.inf)
+            return candidates[0]
+        elif typing_compat.is_generic_type(typ):
+            return self._convert_with_generic_type(tctx, typ, value)
         elif isinstance(typ, typing._SpecialForm):
             assert str(typ) == "typing.Any"
             return value, 1.0
@@ -835,7 +834,7 @@ class ToJsonicConverter:
             return pair
 
     @typing.overload
-    def convert(self, ctx: ConverterContext, typ: typing.Union[typing._GenericAlias, typing._SpecialForm], value: JSONValue) -> typing.Any:  # type: ignore
+    def convert(self, ctx: ConverterContext, typ: typing.Union[typing_compat.GenericAlias, typing._SpecialForm], value: JSONValue) -> typing.Any:  # type: ignore
         ...  # pragma: nocover
 
     @typing.overload
@@ -847,7 +846,7 @@ class ToJsonicConverter:
         return pair[0]
 
     @typing.overload
-    def __call__(self, typ: typing.Union[typing._GenericAlias, typing._SpecialForm], value: JSONValue) -> typing.Any:  # type: ignore
+    def __call__(self, typ: typing.Union[typing_compat.GenericAlias, typing._SpecialForm], value: JSONValue) -> typing.Any:  # type: ignore
         ...  # pragma: nocover
 
     @typing.overload

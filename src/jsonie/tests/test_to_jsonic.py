@@ -1,6 +1,9 @@
+import collections.abc
 import dataclasses
 import datetime
 import decimal
+import sys
+import types
 import typing
 from collections import namedtuple
 
@@ -165,10 +168,164 @@ def test_pytyped_jsonic_data_to_jsonic_array(
 ):
     from ..to_jsonic import ToJsonicConverter
 
+    typ_ = input[0]
+    if isinstance(typ_, types.FunctionType):
+        typ_ = typ_()
+
     assert (
         ToJsonicConverter(
             prefer_immutable_types_for_nonmutable_sequence=prefer_immutable_types_for_nonmutable_sequence
-        )(input[0], input[1])
+        )(typ_, input[1])
+        == expected
+    )
+
+
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="requires python 3.9 or higher")
+@pytest.mark.parametrize(
+    ("prefer_immutable_types_for_nonmutable_sequence", "expected", "input"),
+    [
+        (
+            False,
+            [1, 2],
+            (lambda: collections.abc.Sequence[int], [1, 2]),
+        ),
+        (
+            False,
+            [1, 2],
+            (lambda: collections.abc.Sequence[int], [1.5, 2.3]),
+        ),
+        (
+            False,
+            [1.0, 2.0],
+            (lambda: collections.abc.Sequence[float], [1, 2]),
+        ),
+        (
+            False,
+            [1.5, 2.3],
+            (lambda: collections.abc.Sequence[typing.Any], [1.5, 2.3]),
+        ),
+        (
+            False,
+            [datetime.datetime(1970, 1, 1, 0, 0, 1, tzinfo=datetime.timezone.utc)],
+            (lambda: collections.abc.Sequence[datetime.datetime], [1]),
+        ),
+        (
+            True,
+            (1, 2),
+            (lambda: collections.abc.Sequence[int], [1, 2]),
+        ),
+        (
+            True,
+            (1, 2),
+            (lambda: collections.abc.Sequence[int], [1.5, 2.3]),
+        ),
+        (
+            True,
+            (1.0, 2.0),
+            (lambda: collections.abc.Sequence[float], [1, 2]),
+        ),
+        (
+            True,
+            (1.5, 2.3),
+            (lambda: collections.abc.Sequence[typing.Any], [1.5, 2.3]),
+        ),
+        (
+            True,
+            (datetime.datetime(1970, 1, 1, 0, 0, 1, tzinfo=datetime.timezone.utc),),
+            (lambda: collections.abc.Sequence[datetime.datetime], [1]),
+        ),
+        (
+            False,
+            [1, 2],
+            (lambda: list[int], [1, 2]),
+        ),
+        (
+            False,
+            [1, 2],
+            (lambda: list[int], [1.5, 2.3]),
+        ),
+        (
+            False,
+            [1.0, 2.0],
+            (lambda: list[float], [1, 2]),
+        ),
+        (
+            False,
+            [1.5, 2.3],
+            (lambda: list[typing.Any], [1.5, 2.3]),
+        ),
+        (
+            False,
+            [datetime.datetime(1970, 1, 1, 0, 0, 1, tzinfo=datetime.timezone.utc)],
+            (lambda: list[datetime.datetime], [1]),
+        ),
+        (
+            True,
+            (1, 2),
+            (lambda: tuple[int, ...], [1, 2]),
+        ),
+        (
+            True,
+            (1, 2),
+            (lambda: tuple[int, ...], [1.5, 2.3]),
+        ),
+        (
+            True,
+            (1.0, 2.0),
+            (lambda: tuple[float, ...], [1, 2]),
+        ),
+        (
+            True,
+            (1.5, 2.3),
+            (lambda: tuple[typing.Any, ...], [1.5, 2.3]),
+        ),
+        (
+            True,
+            (datetime.datetime(1970, 1, 1, 0, 0, 1, tzinfo=datetime.timezone.utc),),
+            (lambda: tuple[datetime.datetime, ...], [1]),
+        ),
+        (
+            True,
+            [1, 2],
+            (lambda: list[int], [1, 2]),
+        ),
+        (
+            True,
+            [1, 2],
+            (lambda: list[int], [1.5, 2.3]),
+        ),
+        (
+            True,
+            [1.0, 2.0],
+            (lambda: list[float], [1, 2]),
+        ),
+        (
+            True,
+            [1.5, 2.3],
+            (lambda: list[typing.Any], [1.5, 2.3]),
+        ),
+        (
+            True,
+            [
+                datetime.datetime(1970, 1, 1, 0, 0, 1, tzinfo=datetime.timezone.utc),
+            ],
+            (lambda: list[datetime.datetime], [1]),
+        ),
+    ],
+)
+def test_pytyped_jsonic_data_to_jsonic_array_3_9(
+    prefer_immutable_types_for_nonmutable_sequence, expected, input
+):
+    from ..to_jsonic import ToJsonicConverter
+
+    typ_ = input[0]
+    if isinstance(typ_, types.FunctionType):
+        typ_ = typ_()
+
+    assert (
+        ToJsonicConverter(
+            prefer_immutable_types_for_nonmutable_sequence=prefer_immutable_types_for_nonmutable_sequence
+        )(typ_, input[1])
         == expected
     )
 
