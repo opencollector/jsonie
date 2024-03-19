@@ -239,79 +239,79 @@ def test_pytyped_jsonic_data_to_jsonic_array(
         (
             False,
             [1, 2],
-            (lambda: list[int], [1, 2]),
+            (lambda: list[int], [1, 2]),  # type: ignore[misc]
         ),
         (
             False,
             [1, 2],
-            (lambda: list[int], [1.5, 2.3]),
+            (lambda: list[int], [1.5, 2.3]),  # type: ignore[misc]
         ),
         (
             False,
             [1.0, 2.0],
-            (lambda: list[float], [1, 2]),
+            (lambda: list[float], [1, 2]),  # type: ignore[misc]
         ),
         (
             False,
             [1.5, 2.3],
-            (lambda: list[typing.Any], [1.5, 2.3]),
+            (lambda: list[typing.Any], [1.5, 2.3]),  # type: ignore[misc]
         ),
         (
             False,
             [datetime.datetime(1970, 1, 1, 0, 0, 1, tzinfo=datetime.timezone.utc)],
-            (lambda: list[datetime.datetime], [1]),
+            (lambda: list[datetime.datetime], [1]),  # type: ignore[misc]
         ),
         (
             True,
             (1, 2),
-            (lambda: tuple[int, ...], [1, 2]),
+            (lambda: tuple[int, ...], [1, 2]),  # type: ignore[misc]
         ),
         (
             True,
             (1, 2),
-            (lambda: tuple[int, ...], [1.5, 2.3]),
+            (lambda: tuple[int, ...], [1.5, 2.3]),  # type: ignore[misc]
         ),
         (
             True,
             (1.0, 2.0),
-            (lambda: tuple[float, ...], [1, 2]),
+            (lambda: tuple[float, ...], [1, 2]),  # type: ignore[misc]
         ),
         (
             True,
             (1.5, 2.3),
-            (lambda: tuple[typing.Any, ...], [1.5, 2.3]),
+            (lambda: tuple[typing.Any, ...], [1.5, 2.3]),  # type: ignore[misc]
         ),
         (
             True,
             (datetime.datetime(1970, 1, 1, 0, 0, 1, tzinfo=datetime.timezone.utc),),
-            (lambda: tuple[datetime.datetime, ...], [1]),
+            (lambda: tuple[datetime.datetime, ...], [1]),  # type: ignore[misc]
         ),
         (
             True,
             [1, 2],
-            (lambda: list[int], [1, 2]),
+            (lambda: list[int], [1, 2]),  # type: ignore[misc]
         ),
         (
             True,
             [1, 2],
-            (lambda: list[int], [1.5, 2.3]),
+            (lambda: list[int], [1.5, 2.3]),  # type: ignore[misc]
         ),
         (
             True,
             [1.0, 2.0],
-            (lambda: list[float], [1, 2]),
+            (lambda: list[float], [1, 2]),  # type: ignore[misc]
         ),
         (
             True,
             [1.5, 2.3],
-            (lambda: list[typing.Any], [1.5, 2.3]),
+            (lambda: list[typing.Any], [1.5, 2.3]),  # type: ignore[misc]
         ),
         (
             True,
             [
                 datetime.datetime(1970, 1, 1, 0, 0, 1, tzinfo=datetime.timezone.utc),
             ],
-            (lambda: list[datetime.datetime], [1]),
+            (lambda: list[datetime.datetime], [1]),  # type: ignore[misc]
         ),
     ],
 )

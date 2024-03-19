@@ -37,8 +37,7 @@ CustomConverterConvertFunc = typing.Callable[
 
 class CustomConverter(typing.Protocol):
     @abc.abstractmethod
-    def resolve_name(self, typ: JsonicType) -> str:
-        ...  # pragma: nocover
+    def resolve_name(self, typ: JsonicType) -> str: ...  # pragma: nocover
 
     def __call__(
         self,
@@ -46,16 +45,14 @@ class CustomConverter(typing.Protocol):
         tctx: "TraversalContext",
         typ: JsonicType,
         value: JSONValue,
-    ) -> typing.Tuple[JsonicValue, float]:
-        ...  # pragma: nocover
+    ) -> typing.Tuple[JsonicValue, float]: ...  # pragma: nocover
 
 
 class CustomConverterFuncAdapter:
     convert: CustomConverterConvertFunc  # type: ignore
 
     @abc.abstractmethod
-    def resolve_name(self, typ: JsonicType) -> str:
-        ...  # pragma: nocover
+    def resolve_name(self, typ: JsonicType) -> str: ...  # pragma: nocover
 
     def __call__(
         self,
@@ -572,7 +569,9 @@ class ToJsonicConverter:
         return (None, math.inf)
 
     def _convert_with_literal_type(self, tctx: TraversalContext, typ: typing_compat.GenericAlias, value: JSONValue) -> typing.Tuple[JsonicValue, float]:  # type: ignore
-        possible_literals = {v for v in typing_compat.get_args(typ) if isinstance(v, (bool, int, float, str))}
+        possible_literals = {
+            v for v in typing_compat.get_args(typ) if isinstance(v, (bool, int, float, str))
+        }
         if value in possible_literals:
             return (value, 1.0)
         else:
