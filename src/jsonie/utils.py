@@ -12,8 +12,7 @@ def cause(ex: Tex, cause: Exception) -> Tex:
 
 
 class DateConstructorProtocol(typing.Protocol):
-    def __call__(self, year: int, month: int, day: int):
-        ...  # pragma: nocover
+    def __call__(self, year: int, month: int, day: int): ...  # pragma: nocover
 
 
 Td = typing.TypeVar("Td")  # Td implements DateConstructorProtocol
@@ -38,8 +37,7 @@ class DateTimeConstructorProtocol(typing.Protocol):
         second: int,
         microsecond: int,
         tzinfo: typing.Optional[datetime.tzinfo],
-    ):
-        ...
+    ): ...
 
 
 Tdt = typing.TypeVar("Tdt")  # Tdt implements DateTimeConstructorProtocol

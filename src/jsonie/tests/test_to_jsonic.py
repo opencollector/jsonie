@@ -9,6 +9,8 @@ from collections import namedtuple
 
 import pytest
 
+from ..exceptions import ToJsonicConverterError
+
 
 @pytest.mark.parametrize(
     ("expected", "input"),
@@ -580,3 +582,30 @@ def test_pytyped_jsonic_data_to_jsonic_namedtuple(expected, input):
     from ..to_jsonic import ToJsonicConverter
 
     assert ToJsonicConverter()(input[0], input[1]) == expected
+
+
+if hasattr(typing, "Literal"):
+    Literals = typing.Literal["A", "B", "C"]
+    UnionedLiterals = typing.Union[typing.Literal["A"], typing.Literal["B", "C"]]
+
+    @pytest.mark.parametrize(
+        ("expected", "input"),
+        [
+            ("A", (Literals, "A")),
+            ("B", (Literals, "B")),
+            ("C", (Literals, "C")),
+            (ToJsonicConverterError, (Literals, "D")),
+            ("A", (UnionedLiterals, "A")),
+            ("B", (UnionedLiterals, "B")),
+            ("C", (UnionedLiterals, "C")),
+            (ToJsonicConverterError, (UnionedLiterals, "D")),
+        ],
+    )
+    def test_literal(expected, input):
+        from ..to_jsonic import ToJsonicConverter
+
+        if isinstance(expected, type) and issubclass(expected, BaseException):
+            with pytest.raises(expected):
+                ToJsonicConverter()(input[0], input[1])
+        else:
+            assert ToJsonicConverter()(input[0], input[1]) == expected
