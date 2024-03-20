@@ -79,3 +79,14 @@ def is_generic_type(typ: typing.Any) -> bool:
 
 def is_genuine_type(typ: typing.Union[GenericAlias, UnionType, typing.Type]) -> bool:
     return not isinstance(typ, _generic_alias_types) and not isinstance(typ, typing._SpecialForm)  # type: ignore
+
+
+if hasattr(typing, "Literal"):
+
+    def is_literal_type(typ: GenericAlias) -> bool:
+        return get_origin(typ) is typing.Literal
+
+else:
+
+    def is_literal_type(typ: GenericAlias) -> bool:
+        return False

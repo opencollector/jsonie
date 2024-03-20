@@ -36,8 +36,8 @@ CustomConverterConvertFunc = typing.Callable[
 
 
 class CustomConverter(typing.Protocol):
-    def resolve_name(self, typ: JsonicType) -> str:
-        ...  # pragma: nocover
+    @abc.abstractmethod
+    def resolve_name(self, typ: JsonicType) -> str: ...  # pragma: nocover
 
     def __call__(
         self,
@@ -45,15 +45,14 @@ class CustomConverter(typing.Protocol):
         tctx: "TraversalContext",
         typ: JsonicType,
         value: JSONValue,
-    ) -> typing.Tuple[JsonicValue, float]:
-        ...  # pragma: nocover
+    ) -> typing.Tuple[JsonicValue, float]: ...  # pragma: nocover
 
 
 class CustomConverterFuncAdapter:
     convert: CustomConverterConvertFunc  # type: ignore
 
-    def resolve_name(self, typ: JsonicType) -> str:
-        ...  # pragma: nocover
+    @abc.abstractmethod
+    def resolve_name(self, typ: JsonicType) -> str: ...  # pragma: nocover
 
     def __call__(
         self,
@@ -79,8 +78,7 @@ class NameMapper(metaclass=abc.ABCMeta):
         tctx: "TraversalContext",
         typ: JsonicType,
         name: str,
-    ) -> typing.Optional[str]:
-        ...
+    ) -> typing.Optional[str]: ...
 
     @abc.abstractmethod
     def reverse_resolve(
@@ -89,8 +87,7 @@ class NameMapper(metaclass=abc.ABCMeta):
         tctx: "TraversalContext",
         typ: JsonicType,
         name: str,
-    ) -> typing.Optional[str]:
-        ...
+    ) -> typing.Optional[str]: ...
 
 
 NameMapperResolveFunc = typing.Callable[
@@ -105,8 +102,7 @@ class NameMapperFuncAdapter(NameMapper):
         tctx: "TraversalContext",
         typ: JsonicType,
         name: str,
-    ) -> typing.Optional[str]:
-        ...
+    ) -> typing.Optional[str]: ...
 
     def reverse_resolve(
         self,
@@ -114,8 +110,7 @@ class NameMapperFuncAdapter(NameMapper):
         tctx: "TraversalContext",
         typ: JsonicType,
         name: str,
-    ) -> typing.Optional[str]:
-        ...
+    ) -> typing.Optional[str]: ...
 
     def __init__(self, resolve: NameMapperResolveFunc, reverse_resolve: NameMapperResolveFunc):
         self.resolve = resolve  # type: ignore
@@ -151,12 +146,10 @@ T = typing.TypeVar("T", bound=JsonicValue)
 class ConverterContext(metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
-    def stopped(self) -> bool:
-        ...
+    def stopped(self) -> bool: ...
 
     @abc.abstractmethod
-    def validation_error_occurred(self, error: ToJsonicConverterError) -> None:
-        ...
+    def validation_error_occurred(self, error: ToJsonicConverterError) -> None: ...
 
 
 class DefaultConverterContext(ConverterContext):
@@ -242,8 +235,7 @@ def is_namedtuple(typ: typing.Type[T]) -> bool:
 class NamedTupleType(typing.Protocol):
     _fields: typing.Sequence[str]
 
-    def _make(self, values: typing.Iterable[str]) -> typing.Tuple:
-        ...  # pragma: nocover
+    def _make(self, values: typing.Iterable[str]) -> typing.Tuple: ...  # pragma: nocover
 
 
 class ToJsonicConverter:
@@ -286,6 +278,9 @@ class ToJsonicConverter:
                 return custom_converter.resolve_name(typ)
         if typing_compat.is_union_type(typ):
             return f"any of {english_enumerate((self.type_repr(t) for t in typing_compat.get_args(typ)), conj=', or ')}"
+        elif typing_compat.is_literal_type(typ):  # type: ignore
+            args = typing_compat.get_args(typ)
+            return f"any of literal {english_enumerate((str(v) for v in args), conj=', or ')}"
         elif typing_compat.is_generic_type(typ):  # type: ignore
             origin = typing_compat.get_origin(typ)
             if issubclass(
@@ -573,6 +568,21 @@ class ToJsonicConverter:
         )
         return (None, math.inf)
 
+    def _convert_with_literal_type(self, tctx: TraversalContext, typ: typing_compat.GenericAlias, value: JSONValue) -> typing.Tuple[JsonicValue, float]:  # type: ignore
+        possible_literals = {
+            v for v in typing_compat.get_args(typ) if isinstance(v, (bool, int, float, str))
+        }
+        if value in possible_literals:
+            return (value, 1.0)
+        else:
+            tctx.ctx.validation_error_occurred(
+                ToJsonicConverterError(
+                    tctx.pointer,
+                    f"value is ({json.dumps(value)}) where any of {english_enumerate((str(v) for v in possible_literals), conj=', or ')} expected",
+                )
+            )
+            return (None, math.inf)
+
     def _convert_with_union(self, tctx: TraversalContext, typ: typing_compat.GenericAlias, value: JSONValue) -> typing.Iterable[typing.Tuple[JsonicValue, float]]:  # type: ignore
         args = typing_compat.get_args(typ)
         if len(args) == 2 and None.__class__ in args:
@@ -602,7 +612,6 @@ class ToJsonicConverter:
         entries: typing.List[typing.Tuple[str, JsonicValue]] = []
         confidence = 1.0
         for n, vtyp in self._get_type_hints(tctx, typ).items():
-            v: JsonicValue
             name_mapper = self._lookup_name_mapper(typ)
             k: str
             if name_mapper is None:
@@ -644,6 +653,7 @@ class ToJsonicConverter:
                 )
             )
             return (None, math.inf)
+        assert dataclasses.is_dataclass(typ)
         attrs: typing.MutableMapping[str, JsonicValue] = {}
         confidence = 1.0
         for field in dataclasses.fields(typ):
@@ -813,6 +823,8 @@ class ToJsonicConverter:
                 )
                 return (None, math.inf)
             return candidates[0]
+        elif typing_compat.is_literal_type(typ):
+            return self._convert_with_literal_type(tctx, typ, value)
         elif typing_compat.is_generic_type(typ):
             return self._convert_with_generic_type(tctx, typ, value)
         elif isinstance(typ, typing._SpecialForm):
@@ -841,8 +853,9 @@ class ToJsonicConverter:
         ...  # pragma: nocover
 
     @typing.overload
-    def convert(self, ctx: ConverterContext, typ: typing.Type[T], value: JSONValue) -> T:
-        ...  # pragma: nocover
+    def convert(
+        self, ctx: ConverterContext, typ: typing.Type[T], value: JSONValue
+    ) -> T: ...  # pragma: nocover
 
     def convert(self, ctx: ConverterContext, typ: JsonicType, value: JSONValue) -> typing.Any:
         pair = self._convert(TraversalContext(ctx, JSONPointer(), typ), typ, value)
@@ -853,8 +866,7 @@ class ToJsonicConverter:
         ...  # pragma: nocover
 
     @typing.overload
-    def __call__(self, typ: typing.Type[T], value: JSONValue) -> T:
-        ...  # pragma: nocover
+    def __call__(self, typ: typing.Type[T], value: JSONValue) -> T: ...  # pragma: nocover
 
     def __call__(self, typ: JsonicType, value: JSONValue) -> typing.Any:
         return self.convert(DefaultConverterContext(), typ, value)
