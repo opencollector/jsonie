@@ -316,7 +316,7 @@ class ToJsonicConverter:
     def _convert_with_pytype(
         self, tctx: TraversalContext, typ: typing.Type, value: JsonicValue
     ) -> typing.Tuple[JsonicValue, float]:
-        if isinstance(value, typ):
+        if typ is typing.Any or isinstance(value, typ):
             return value, 0.5
         if isinstance(value, str):
             if issubclass(typ, datetime.datetime):
