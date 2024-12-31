@@ -833,6 +833,7 @@ class ToJsonicConverter:
         elif isinstance(typ, typing._TypedDictMeta):  # type: ignore
             return self._convert_with_typeddict(tctx, typ, value)
         elif dataclasses.is_dataclass(typ):
+            assert isinstance(typ, type)
             return self._convert_with_dataclass(tctx, typ, value)
         elif is_namedtuple(typ):
             return self._convert_with_namedtuple(tctx, typ, value)
