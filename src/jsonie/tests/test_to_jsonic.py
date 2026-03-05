@@ -491,7 +491,10 @@ def test_pytyped_jsonic_data_to_jsonic_fail(input):
         ),
         (
             {"a": 1.5, "b": {"c": 5}},
-            (typing.TypedDict("foo", {"a": float, "b": typing.TypedDict("bar", {"c": int})}), {"a": 1.5, "b": {"c": 5.0}}),  # type: ignore
+            (
+                typing.TypedDict("foo", {"a": float, "b": typing.TypedDict("bar", {"c": int})}),
+                {"a": 1.5, "b": {"c": 5.0}},
+            ),  # type: ignore
         ),
     ],
 )

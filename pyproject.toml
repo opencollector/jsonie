@@ -38,37 +38,29 @@ test = "pytest {args}"
 cov = "pytest --cov --cov-report=xml {args}"
 
 [tool.hatch.envs.lint]
-dependencies = ["black", "flake8", "mypy", "isort", "pytest"]
+dependencies = ["ruff", "mypy", "pytest"]
 
 [tool.hatch.envs.lint.scripts]
 check = [
-    "flake8",
+    "ruff check src",
+    "ruff format --check src",
     "mypy",
-    "black --check src",
-    "isort --check src",
 ]
 fmt = [
-    "black src",
-    "isort src",
+    "ruff check --fix src",
+    "ruff format src",
 ]
 
-[tool.black]
+[tool.ruff]
 line-length = 100
-exclude = '''
-    .git
-    | .github
-    | .mypy_cache
-    | .venv
-    | docs
-    | build
-    | dist
-'''
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-honor_noqa = true
-group_by_package = true
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+force-wrap-aliases = true
+combine-as-imports = true
 
 [tool.mypy]
 files = "src/"

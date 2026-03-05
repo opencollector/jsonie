@@ -80,4 +80,9 @@ def english_enumerate(items: typing.Iterable[str], conj: str = ", and ") -> str:
 
 
 def is_optional(typ: JsonicType) -> bool:
-    return isinstance(typ, typing._GenericAlias) and isinstance(typing.get_origin(typ), typing._SpecialForm) and typing.get_origin(typ)._name == "Union" and type(None) in typ.__args__  # type: ignore
+    return (
+        isinstance(typ, typing._GenericAlias)
+        and isinstance(typing.get_origin(typ), typing._SpecialForm)
+        and typing.get_origin(typ)._name == "Union"
+        and type(None) in typ.__args__
+    )  # type: ignore

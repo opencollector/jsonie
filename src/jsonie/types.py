@@ -24,6 +24,8 @@ TypedClass = object
 JsonicValue = typing.Union[JsonicScalar, JsonicArray, JsonicSet, JsonicObject, TypedClass]
 
 if hasattr(typing, "ForwardRef"):
-    JsonicType = typing.Union[typing.Type[JsonicValue], GenericAlias, typing._SpecialForm, typing.ForwardRef]  # type: ignore
+    JsonicType = typing.Union[
+        typing.Type[JsonicValue], GenericAlias, typing._SpecialForm, typing.ForwardRef
+    ]  # type: ignore
 else:
     JsonicType = typing.Union[typing.Type[JsonicValue], GenericAlias, typing._SpecialForm]  # type: ignore
