@@ -798,6 +798,8 @@ class ToJsonicConverter:
 
     def _eval_type(self, tctx: TraversalContext, typ: JsonicType):
         global_ns = tctx.get_global_ns()
+        if isinstance(typ, str):
+            typ = typing.ForwardRef(typ)
         return typing._eval_type(typ, global_ns, tctx.get_local_ns() or global_ns)  # type: ignore
 
     def _convert_inner(

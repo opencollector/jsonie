@@ -584,6 +584,59 @@ def test_pytyped_jsonic_data_to_jsonic_namedtuple(expected, input):
     assert ToJsonicConverter()(input[0], input[1]) == expected
 
 
+class TestFutureAnnotations:
+    """Test that dataclasses defined in modules using ``from __future__ import annotations`` work correctly.
+
+    When ``from __future__ import annotations`` is active, ``field.type`` is a
+    raw string (e.g. ``'Sequence[Baz]'``) rather than the resolved type.
+    ``_eval_type`` must handle this by wrapping strings in ``ForwardRef``.
+    """
+
+    def test_simple_dataclass(self):
+        from ..to_jsonic import ToJsonicConverter
+        from ._future_annotations_fixtures import Baz
+
+        result = ToJsonicConverter()(Baz, {"x": 1, "y": "hello"})
+        assert result == Baz(x=1, y="hello")
+
+    def test_simple_dataclass_with_defaults(self):
+        from ..to_jsonic import ToJsonicConverter
+        from ._future_annotations_fixtures import Baz
+
+        result = ToJsonicConverter()(Baz, {"x": 42})
+        assert result == Baz(x=42, y="default")
+
+    def test_nested_dataclass_with_sequence(self):
+        from ..to_jsonic import ToJsonicConverter
+        from ._future_annotations_fixtures import Baz, Qux
+
+        result = ToJsonicConverter()(
+            Qux,
+            {
+                "items": [{"x": 1, "y": "a"}, {"x": 2, "y": "b"}],
+                "label": "test",
+            },
+        )
+        assert result == Qux(items=[Baz(x=1, y="a"), Baz(x=2, y="b")], label="test")
+
+    def test_self_referencing_dataclass(self):
+        from ..to_jsonic import ToJsonicConverter
+        from ._future_annotations_fixtures import SelfRef
+
+        result = ToJsonicConverter()(
+            SelfRef,
+            {"value": 1, "child": {"value": 2, "child": None}},
+        )
+        assert result == SelfRef(value=1, child=SelfRef(value=2, child=None))
+
+    def test_self_referencing_dataclass_without_child(self):
+        from ..to_jsonic import ToJsonicConverter
+        from ._future_annotations_fixtures import SelfRef
+
+        result = ToJsonicConverter()(SelfRef, {"value": 99})
+        assert result == SelfRef(value=99, child=None)
+
+
 if hasattr(typing, "Literal"):
     Literals = typing.Literal["A", "B", "C"]
     UnionedLiterals = typing.Union[typing.Literal["A"], typing.Literal["B", "C"]]
