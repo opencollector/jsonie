@@ -50,7 +50,7 @@ else:
 
 
 def _expand_union_types(
-    t: typing.Union[UnionType, typing.Type]
+    t: typing.Union[UnionType, typing.Type],
 ) -> typing.Tuple[typing.Union[UnionType, typing.Type], ...]:
     if isinstance(t, UnionType):
         return typing.cast(typing.Tuple[typing.Union[UnionType, typing.Type], ...], get_args(t))
