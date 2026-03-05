@@ -1,9 +1,56 @@
 [build-system]
-requires = [
-  "setuptools >= 40.9.0",
-  "wheel",
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jsonie"
+version = "0.0.8"
+description = "conversion between JSON and typed Python objects having Json-like structure"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Moriyoshi Koizumi", email = "mozo@mozo.jp" }]
+keywords = ["json", "dataclasses", "typing"]
+requires-python = ">=3.8"
+dependencies = ["iso8601"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
-build-backend = "setuptools.build_meta"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jsonie"]
+
+[tool.hatch.envs.default]
+dependencies = ["pytest", "pytest-cov"]
+
+[[tool.hatch.envs.default.matrix]]
+python = ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args}"
+cov = "pytest --cov --cov-report=xml {args}"
+
+[tool.hatch.envs.lint]
+dependencies = ["black", "flake8", "mypy", "isort", "pytest"]
+
+[tool.hatch.envs.lint.scripts]
+check = [
+    "flake8",
+    "mypy",
+    "black --check src",
+    "isort --check src",
+]
+fmt = [
+    "black src",
+    "isort src",
+]
 
 [tool.black]
 line-length = 100
@@ -22,3 +69,6 @@ profile = "black"
 multi_line_output = 3
 honor_noqa = true
 group_by_package = true
+
+[tool.mypy]
+files = "src/"

@@ -9,45 +9,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Setup packages
-        run: |
-          pip install -U pip setuptools wheel
-          pip install -r requirements-dev.txt
+      - name: Install hatch
+        run: pip install hatch
       - name: Lint
-        run: |
-          flake8
-          mypy
-          black --diff src
-          black --check src
-          isort --diff src
-          isort --check src
+        run: hatch run lint:check
 
   test:
-    name: Test (Python ${{ matrix.python-version }})
+    name: Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "${{ matrix.python-version }}"
+          python-version: |
+            3.8
+            3.9
+            3.10
+            3.11
+            3.12
+            3.13
+            3.14
           allow-prereleases: true
-      - name: Setup packages
-        run: |
-          pip install -U pip setuptools wheel
-          pip install -r requirements-dev.txt codecov
+      - name: Install hatch
+        run: pip install hatch
       - name: Test
-        run: |
-          pytest --cov --cov-report=xml
+        run: hatch run cov
       - name: Send coverage to codecov
         run: |
+          pip install codecov
           codecov
