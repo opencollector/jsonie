@@ -487,11 +487,11 @@ def test_pytyped_jsonic_data_to_jsonic_fail(input):
     [
         (
             {"a": 12, "b": 456.0},
-            (typing.TypedDict("foo", a=int, b=float), {"a": 12.123, "b": 456}),  # type: ignore
+            (typing.TypedDict("foo", {"a": int, "b": float}), {"a": 12.123, "b": 456}),  # type: ignore
         ),
         (
             {"a": 1.5, "b": {"c": 5}},
-            (typing.TypedDict("foo", a=float, b=typing.TypedDict("bar", c=int)), {"a": 1.5, "b": {"c": 5.0}}),  # type: ignore
+            (typing.TypedDict("foo", {"a": float, "b": typing.TypedDict("bar", {"c": int})}), {"a": 1.5, "b": {"c": 5.0}}),  # type: ignore
         ),
     ],
 )
@@ -619,6 +619,7 @@ class TestFutureAnnotations:
         )
         assert result == Qux(items=[Baz(x=1, y="a"), Baz(x=2, y="b")], label="test")
 
+    @pytest.mark.skipif(sys.version_info < (3, 10), reason="requires python 3.10 or higher")
     def test_self_referencing_dataclass(self):
         from ..to_jsonic import ToJsonicConverter
         from ._future_annotations_fixtures import SelfRef

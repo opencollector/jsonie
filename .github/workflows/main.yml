@@ -4,20 +4,20 @@ on:
   - push
 
 jobs:
-  test:
-    name: Test and lint source
+  lint:
+    name: Lint source
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Set up Python 38
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.8"
+          python-version: "3.12"
       - name: Setup packages
         run: |
           pip install -U pip setuptools wheel
-          pip install -r requirements-dev.txt codecov
+          pip install -r requirements-dev.txt
       - name: Lint
         run: |
           flake8
@@ -26,6 +26,25 @@ jobs:
           black --check src
           isort --diff src
           isort --check src
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: "${{ matrix.python-version }}"
+          allow-prereleases: true
+      - name: Setup packages
+        run: |
+          pip install -U pip setuptools wheel
+          pip install -r requirements-dev.txt codecov
       - name: Test
         run: |
           pytest --cov --cov-report=xml
